@@ -1,37 +1,48 @@
-import numpy as np
-from sklearn.linear_model import LinearRegression
+
 import streamlit as st
+import numpy as np
 
-# === MODEL TRAINING SECTION ===
-# Example data: [length (mm), width (mm), actual_carat], target: visual_carat
-X_raw = np.array([
-    [13.31, 9.36, 8.01],
-    [13.23, 9.49, 7.82],
-])
-
-y = np.array([7.7, 7.79])  # visual carat values
-
-# Derived feature: face-up area
-face_up_area = X_raw[:, 0] * X_raw[:, 1]
-X_features = np.column_stack((X_raw, face_up_area))
-
-# Train linear regression model
-model = LinearRegression().fit(X_features, y)
-
-# === STREAMLIT APP SECTION ===
-st.title("Emerald Cut Diamond Visual Carat Calculator")
+st.title("Emerald Cut Diamond Visual Carat Estimator")
 
 st.markdown("""
-Enter the measurements of your emerald cut diamond to estimate the **Visual Carat**, which is how large the stone appears when viewed from the top.
+This app estimates the **visual carat weight** of an emerald cut diamond based on:
+- Length (mm)
+- Width (mm)
+- Actual Carat Weight (ct)
+- Table %
+
+The visual carat represents how large a diamond appears face-up.
 """)
 
-# Input fields
-length = st.number_input("Length (mm)", min_value=0.0, step=0.01, format="%.2f")
-width = st.number_input("Width (mm)", min_value=0.0, step=0.01, format="%.2f")
-actual_carat = st.number_input("Actual Carat Weight", min_value=0.0, step=0.01, format="%.2f")
+# Inputs
+length = st.number_input("Length (mm)", min_value=0.0, step=0.01)
+width = st.number_input("Width (mm)", min_value=0.0, step=0.01)
+actual_carat = st.number_input("Actual Carat Weight (ct)", min_value=0.0, step=0.01)
+table_pct = st.number_input("Table %", min_value=0.0, max_value=100.0, step=0.1)
 
-if st.button("Calculate Visual Carat"):
-    face_up_area_input = length * width
-    features = np.array([[length, width, actual_carat, face_up_area_input]])
-    visual_carat = model.predict(features)[0]
-    st.success(f"Estimated Visual Carat: {visual_carat:.2f} ct")
+# Calculate face-up area
+face_up_area = length * width
+
+# Coefficients from the trained model
+coefs = {
+    "length": -0.9013,
+    "width": -1.3270,
+    "actual_carat": 0.0030,
+    "table": -0.0001,
+    "face_up_area": 0.1925
+}
+intercept = 8.1173
+
+# Prediction
+if length > 0 and width > 0 and actual_carat > 0 and table_pct > 0:
+    visual_carat = (
+        coefs["length"] * length +
+        coefs["width"] * width +
+        coefs["actual_carat"] * actual_carat +
+        coefs["table"] * table_pct +
+        coefs["face_up_area"] * face_up_area +
+        intercept
+    )
+    st.subheader(f"Estimated Visual Carat: {visual_carat:.2f} ct")
+else:
+    st.info("Please enter all required values to calculate visual carat.")
